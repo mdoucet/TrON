@@ -8,4 +8,8 @@ conda activate tron
 
 # TODO
 
-[] Mat to add example data
+- Mat to add example data
+- Source tree
+   - data
+   - bayesian_analysis (with setup.py)
+   - example analysis (run and plot it)
