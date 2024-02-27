@@ -13,3 +13,7 @@ conda activate tron
    - data
    - bayesian_analysis (with setup.py)
    - example analysis (run and plot it)
+   - test
+   - docs
+- Setup up Actions
+- 
