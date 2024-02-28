@@ -8,6 +8,6 @@ dependencies:
   - pandas
   - plotly
   - scipy
-  - matplotlib
+  - matplotlib==3.7.3
   - torch_geometric
   - refl1d

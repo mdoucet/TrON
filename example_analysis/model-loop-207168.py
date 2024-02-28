@@ -13,7 +13,6 @@ import model_utils
 
 import warnings
 import matplotlib.cbook
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)
 warnings.simplefilter('ignore', UserWarning)
 
 # Parse input arguments ########################################################
