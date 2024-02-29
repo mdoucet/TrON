@@ -9,5 +9,6 @@ dependencies:
   - plotly
   - scipy
   - matplotlib==3.7.3
+  - ipympl
   - torch_geometric
   - refl1d
