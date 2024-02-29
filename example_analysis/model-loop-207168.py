@@ -1,4 +1,5 @@
 """
+refl1d model for the DREAM fitting of run 207168.
 refl1d_cli.py --fit=dream --steps=100 --burn=100 --store=results model-loop.py
 
 Use --batch is you dont' want to see the output and pop up the plots.
