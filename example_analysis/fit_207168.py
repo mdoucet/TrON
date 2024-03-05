@@ -8,9 +8,8 @@ import time
 sys.path.append(os.path.expanduser('~/git/TrON/bayesian_analysis'))
 import importlib
 import model_utils
-importlib.reload(model_utils)
 import fitting_loop
-importlib.reload(fitting_loop)
+
 
 # Data analysis directory
 project_dir = os.path.expanduser('~/git/TrON/example_analysis')

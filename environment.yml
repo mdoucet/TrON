@@ -3,6 +3,9 @@ dependencies:
 - python=3.11
 - numpy
 - pytorch
+- qtpy
+- pip
+- pyqt=5.15,<6
 - pip:
   - notebook
   - pandas
