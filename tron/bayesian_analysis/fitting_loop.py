@@ -7,7 +7,7 @@ import json
 import subprocess
 import shutil
 
-import model_utils
+from . import model_utils
 
 
 class FittingLoop():

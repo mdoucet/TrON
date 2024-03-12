@@ -5,9 +5,9 @@ import numpy as np
 import refl1d
 from refl1d.names import QProbe, Parameter
 
-from bayes_experiment import BayesSLD as SLD
-from bayes_experiment import BayesSlab as Slab
-from bayes_experiment import BayesExperiment as Experiment
+from .bayes_experiment import BayesSLD as SLD
+from .bayes_experiment import BayesSlab as Slab
+from .bayes_experiment import BayesExperiment as Experiment
 
 ERR_MIN_ROUGH = 3
 ERR_MIN_THICK = 5
@@ -113,11 +113,7 @@ def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ra
             if not interface_fixed:
                 slab.interface.range(interface_limits[0], interface_limits[1])
 
-        if sample is None:
-            sample = slab
-        else:
-            sample = sample | slab
-
+        sample = slab if sample is None else sample | slab
     return sample
 
 

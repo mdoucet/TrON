@@ -9,7 +9,6 @@ import importlib
 from tron.bayesian_analysis import model_utils, fitting_loop
 
 
-
 # Data analysis directory
 project_dir = os.path.expanduser('~/git/TrON/example_analysis')
 
@@ -21,12 +20,6 @@ dyn_model_dir = os.path.join(project_dir, 'dyn-fitting')
 
 
 # Initial data set and model (starting point)
-initial_data_file = os.path.join(data_dir, 'REFL_207161_combined_data_auto.txt')
-initial_data = np.loadtxt(initial_data_file).T
-
-final_data_file = os.path.join(data_dir, 'REFL_207169_combined_data_auto.txt')
-final_data = np.loadtxt(final_data_file).T
-
 initial_err_file = os.path.join(dyn_model_dir, '207161', '__model-err.json')
 initial_expt_file = os.path.join(dyn_model_dir, '207161', '__model-expt.json')
 
@@ -67,7 +60,6 @@ if PROCESS_ALL_DATA:
     # Get only the files for the run we're interested in
     _good_files = [_f for _f in _file_list if _f.startswith('r%d_t' % dynamic_run)]
     #_good_files = _good_files[first:last]
-
 
 print(_good_files)
 loop.fit(_good_files, fit_forward=False)
