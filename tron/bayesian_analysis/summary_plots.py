@@ -10,12 +10,13 @@ from matplotlib.patches import PathPatch
 
 try:
     from bumps import dream
-    import fit_uncertainties
     HAS_BUMPS  = True
 except:
-    print("No bumps")
+    print("Summary_plot could not import bumps")
     HAS_BUMPS = False
 
+if HAS_BUMPS:
+    from . import fit_uncertainties
 
 def read_model(model_path, dq=0.027):
     with open(model_path) as fd:
@@ -181,7 +182,7 @@ def plot_dyn_sld(file_list, initial_state, final_state, delta_t=15,
                  fit_dir=None, dyn_data_dir=None, dyn_fit_dir=None, model_name='__model',
                  model_file=None, show_cl=True, legend_font_size=6):
 
-    fig, ax = plt.subplots(dpi=250, figsize=(5, 4.1))
+    fig, ax = plt.subplots(dpi=200, figsize=(5, 4.1))
     plt.subplots_adjust(left=0.15, right=.95, top=0.95, bottom=0.15)
 
     prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -239,6 +240,7 @@ def plot_dyn_sld(file_list, initial_state, final_state, delta_t=15,
     plt.xlabel('z ($\AA$)', fontsize=14)
     plt.ylabel('SLD ($10^{-6}/\AA^2$)', fontsize=14)
     plt.show()
+    plt.savefig('%s_dyn_sld.svg' % initial_state)
 
 
 def trend_data(file_list, initial_state, final_state, label='',
