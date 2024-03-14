@@ -93,6 +93,7 @@ class FittingLoop():
         """
         Print the initial and final models.
         """
+        print(self)
         with open(self.initial_err_file, 'r') as fd:
             initial_model = json.load(fd)
         with open(self.final_err_file, 'r') as fd:
@@ -139,7 +140,7 @@ class FittingLoop():
             _base_name, _ = os.path.splitext(_file)
             data_to_fit = os.path.join(self.dyn_data_dir, _file)
             command = [
-                'refl1d_cli.py',
+                'python', '-m', 'refl1d.main',
                 '--fit=dream',
                 '--steps=1000',
                 '--burn=1000',
@@ -176,3 +177,71 @@ class FittingLoop():
             item_time = time.time()-t1
             t1 = time.time()
             print("    Completed: %g s [total=%g m]" % (item_time, total_time))
+
+
+def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt_file, results_dir):
+    """
+        Execute the fitting loop.
+
+        :param dynamic_run: Run number of the dynamic data.
+        :param data_dir: Directory where the dynamic data is stored.
+        :param model_file: File path of the model.
+        :param initial_expt_file: File path of the initial refl1d json experiment file.
+        :param final_expt_file: File path of the final refl1d json experiment file.
+        :param results_dir: Directory where the results will be stored.
+    """
+    model_dir, model_name = os.path.split(model_file)
+
+    # Initial data set and model (starting point)
+    if initial_expt_file is not None:
+        if 'expt' not in initial_expt_file:
+            raise ValueError("The initial experiment file must be a refl1d json experiment file.")
+        else:
+            initial_err_file = initial_expt_file.replace('expt', 'err')
+            if not os.path.exists(initial_err_file):
+                raise ValueError(f"Error file {initial_err_file} does not exist.")
+    
+    if final_expt_file is not None:
+        if 'expt' not in final_expt_file:
+            raise ValueError("The final experiment file must be a refl1d json experiment file.")
+        else:
+            final_err_file = final_expt_file.replace('expt', 'err')
+            if not os.path.exists(final_err_file):
+                raise ValueError(f"Error file {final_err_file} does not exist.")
+          
+    # Create top-level directory for the dynamic fits
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+
+    model_name = model_name.replace('.py', '')
+    loop = FittingLoop(data_dir, results_dir=results_dir, model_dir=model_dir, model_name=model_name,
+                       initial_err_file=initial_err_file, initial_expt_file=initial_expt_file,
+                       final_err_file=final_err_file, final_expt_file=final_expt_file,
+                    )
+
+    loop.print_initial_final()
+
+    _good_files = [_f for _f in sorted(os.listdir(data_dir)) if _f.startswith('r%d_t' % dynamic_run)]
+
+    try:
+        loop.fit(_good_files, fit_forward=False)
+    except Exception as e:
+        print(f"Error: {e}")
+        print(loop.last_output)
+
+
+if __name__ == '__main__':
+    import sys
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Fitting loop for time-resolved data sets.')
+    parser.add_argument('dynamic_run', type=int, help='Run number of the dynamic data.')
+    parser.add_argument('data_dir', type=str, help='Directory where the dynamic data is stored.')
+    parser.add_argument('model_file', type=str, help='File path of the model.')
+    parser.add_argument('initial_expt_file', type=str, help='File path of the initial refl1d json experiment file.')
+    parser.add_argument('final_expt_file', type=str, help='File path of the final refl1d json experiment file.')
+    parser.add_argument('results_dir', type=str, help='Directory where the results will be stored.')
+
+    args = parser.parse_args()
+
+    execute_fit(args.dynamic_run, args.data_dir, args.model_file, args.initial_expt_file, args.final_expt_file, args.results_dir)
