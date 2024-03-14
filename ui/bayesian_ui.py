@@ -8,14 +8,17 @@ from qtpy.QtWidgets import QFileDialog, QGridLayout, QLabel, QMessageBox, QPushB
 DATA_FILE_DIRECTIVE = "Click to choose a file to process"
 OUTPUT_DIR_DIRECTIVE = os.path.expanduser("~")
 
+from tron.bayesian_analysis import template, fitting_loop, summary_plots
+
 
 class PathSelector:
-    def __init__(self, key, parent, label, directive, select_dir:bool=True):
+    def __init__(self, key, parent, label, directive, select_dir:bool=True, create_file:bool=False):
         self.parent = parent
         self.label = label
         self.directive = directive
         self.key = key
         self.select_dir = select_dir
+        self.create_file = create_file
 
     def attach(self, layout, row_id):
         font = QtGui.QFont()
@@ -55,12 +58,19 @@ class PathSelector:
                 self.path_label.setText(_path)
                 QtCore.QSettings().setValue(f'tr_bayes_{self.key}', _path)
         else:
-            _path, _ = QFileDialog.getOpenFileName(None, 'Open file',
-                                                   self.path_label.text(),
-                                                   'Settings file (*.*)')
-            if os.path.isfile(_path) or len(_path.strip()) == 0:
+            if self.create_file:
+                _path, _ = QFileDialog.getSaveFileName(None, 'Save file',
+                                                       self.path_label.text(),
+                                                       'Settings file (*.*)')
                 self.path_label.setText(_path)
                 QtCore.QSettings().setValue(f'tr_bayes_{self.key}', _path)
+            else:
+                _path, _ = QFileDialog.getOpenFileName(None, 'Open file',
+                                                    self.path_label.text(),
+                                                    'Settings file (*.*)')
+                if os.path.isfile(_path) or len(_path.strip()) == 0:
+                    self.path_label.setText(_path)
+                    QtCore.QSettings().setValue(f'tr_bayes_{self.key}', _path)
     
 
 class BayesianModel(QWidget):
@@ -124,9 +134,23 @@ class BayesianModel(QWidget):
                                              text, select_dir=False)
         row_id = self.final_state_file.attach(layout, row_id)
 
+        # Select fit direction
+        self.fit_direction = QtWidgets.QCheckBox("Fit forward")
+        layout.addWidget(self.fit_direction, row_id, 1)
+        row_id += 1
+
+        # refl1d model file
+        text = (
+            "Select a name and location for a new model file.\n"
+            + "You can modify this file to adjust fit parameters."
+        )
+        self.model_file = PathSelector("model_file", self, "Model file to create",
+                                       text, select_dir=False, create_file=True)
+        row_id = self.model_file.attach(layout, row_id)
+
         # Output directory
         self.output_dir = PathSelector("output_dir", self, "Output directory", 
-                                        "Click to choose an output directory.",
+                                        "",
                                         select_dir=True)
         row_id = self.output_dir.attach(layout, row_id)
 
@@ -137,13 +161,18 @@ class BayesianModel(QWidget):
 
         # Process button
         row_id += 1
+        self.create_model = QPushButton('Create model')
+        self.create_model.setStyleSheet("background-color : orange")
+        layout.addWidget(self.create_model, row_id, 1)
+
         self.perform_reduction = QPushButton('Process')
         self.perform_reduction.setStyleSheet("background-color : green")
-        layout.addWidget(self.perform_reduction, row_id, 1)
+        layout.addWidget(self.perform_reduction, row_id, 2)
 
         # connections
         row_id += 1
-        self.perform_reduction.clicked.connect(self.reduce)
+        self.perform_reduction.clicked.connect(self.process)
+        self.create_model.clicked.connect(self.create_model_file)
 
         # Populate from previous session
         self.read_settings()
@@ -183,7 +212,27 @@ class BayesianModel(QWidget):
         msgBox.setStandardButtons(QMessageBox.Ok)
         msgBox.exec()
 
-    def reduce(self):
+    def create_model_file(self):
+        """
+            Create a model file based on the initual or final state.
+        """
+        fit_forward = self.fit_direction.isChecked()
+        init_json = self.initial_state_file.path_label.text()
+        final_json = self.final_state_file.path_label.text()
+        model_path = self.model_file.path_label.text()
+        if not os.path.isdir(os.path.dirname(model_path)):
+            self.show_dialog("The chosen model file directory could not be found")
+            return
+
+        template_str = template.create_model(init_json, final_json, fit_forward=fit_forward)
+
+        with open(model_path, 'w') as fd:
+            fd.write(template_str)
+
+    def process(self):
+        """
+            Execute the fitting loop
+        """
         if not self.check_inputs():
             print("Invalid inputs found")
             return
@@ -191,7 +240,7 @@ class BayesianModel(QWidget):
         self.save_settings()
 
         print("Processing!")
-
-        #subprocess.run(['nsd-conda-wrap.sh', 'refl1d', 'scripts/quick_reduce.py',
-        #                self.run_number_ledit.text(), self.db_run_number_ledit.text(),
-        #                self.peak_pixel_ledit.text(), self.db_peak_pixel_ledit.text(), self.output_dir_label.text()])
+        fitting_loop.execute_fit(int(self.run_number_ledit.text()), self.td_data_dir.path_label.text(),
+                                 self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
+                                 self.final_state_file.path_label.text(),
+                                 self.output_dir.path_label.text())

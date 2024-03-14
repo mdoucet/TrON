@@ -84,40 +84,28 @@ def plot_fit(run, title, fit_dir=None, ar_dir=None, scale=1):
     plt.plot(_fit[0], _fit[4]*scale, linewidth=1, markersize=2, marker='', color='grey', zorder=4)
 
 
-def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_index=-1, delta_t=30,
-                  fit_dir=None, ar_dir=None, dyn_data_dir=None, dyn_fit_dir=None, model_name='__model', scale=1):
-    # Reduced data
-    pre_data_file = os.path.join(ar_dir, 'REFL_%s_combined_data_auto.txt' % initial_state)
-    pre_data = np.loadtxt(pre_data_file).T
-
-    post_data = None
-    if final_state is not None:
-        post_data_file = os.path.join(ar_dir, 'REFL_%s_combined_data_auto.txt' % final_state)
-        post_data = np.loadtxt(post_data_file).T
+def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_index=-1,
+                  dyn_data_dir=None, dyn_fit_dir=None, model_name='__model', scale=1):
 
     # Fit results
     pre_fit = None
-    pre_fit_file = os.path.join(fit_dir, str(initial_state), "__model-refl.dat")
-    if os.path.isfile(pre_fit_file):
-        pre_fit = np.loadtxt(pre_fit_file).T
+    if os.path.isfile(initial_state):
+        pre_fit = np.loadtxt(initial_state).T
 
     post_fit = None
-    post_fit_file = os.path.join(fit_dir, str(final_state), "__model-refl.dat")
-    if os.path.isfile(post_fit_file):
-        post_fit = np.loadtxt(post_fit_file).T
+    if os.path.isfile(final_state):
+        post_fit = np.loadtxt(final_state).T
 
     # Dynamic data
     _file_list = sorted(os.listdir(dyn_data_dir))
     fig, ax = plt.subplots(dpi=150, figsize=(5,8))
     plt.subplots_adjust(left=0.15, right=.95, top=0.98, bottom=0.1)
 
-    #plt.plot(pre_data[0], pre_data[1], linewidth=1, color='darkgreen', label='initial')
-    idx = pre_data[2]<pre_data[1]
-    plt.errorbar(pre_data[0][idx], pre_data[1][idx], yerr=pre_data[2][idx], linewidth=1, 
-                 markersize=2, marker='.', linestyle='',
-                 color='darkgreen', label='Pre cycle 1')
-
     if pre_fit is not None:
+        idx = pre_fit[3]<pre_fit[2]
+        plt.errorbar(pre_fit[0][idx], pre_fit[2][idx], yerr=pre_fit[3][idx], linewidth=1, 
+                    markersize=2, marker='.', linestyle='',
+                    color='darkgreen', label='Pre cycle 1')
         plt.plot(pre_fit[0], pre_fit[4], linewidth=1, markersize=2, marker='', color='black', zorder=400)
 
     # Get only the files for the run we're interested in
@@ -128,6 +116,12 @@ def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_i
     scale = 1.
     multiplier = 10
     file_list = []
+
+    # Check timing
+    first_time = int(os.path.splitext(_good_files[first_index])[0].replace('r%d_t' % dynamic_run, ''))
+    second_time = int(os.path.splitext(_good_files[first_index+1])[0].replace('r%d_t' % dynamic_run, ''))
+    delta_t = second_time - first_time
+
     for _file in _good_files[first_index:last_index]:
         if _file.startswith('r%d_t' % dynamic_run):
             scale *= 1
@@ -159,12 +153,12 @@ def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_i
 
     final_scale = scale/multiplier
     if post_fit is not None:
+        idx = post_fit[3]<post_fit[2]
+        plt.errorbar(post_fit[0][idx], post_fit[2][idx]*final_scale, yerr=post_fit[3][idx]*final_scale, linewidth=1, 
+                    markersize=2, marker='.', linestyle='',
+                    color='darkgreen', label='Post cycle 1')
         plt.plot(post_fit[0], post_fit[4]*final_scale, linewidth=1, color='darkblue')#, label='final')
-    if post_data is not None:
-        idx = post_data[2]<post_data[1]
-        plt.errorbar(post_data[0][idx], post_data[1][idx]*final_scale, yerr=post_data[2][idx]*final_scale, linewidth=1, 
-                     markersize=2, marker='.', linestyle='',
-                     color='darkgreen', label='Post cycle 1')
+
 
     handles, labels = ax.get_legend_handles_labels()
     plt.legend(handles[::-1], labels[::-1], frameon=False, prop={'size': 7})
