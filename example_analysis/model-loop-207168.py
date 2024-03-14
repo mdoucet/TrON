@@ -9,12 +9,8 @@ import numpy as np
 import os
 
 from refl1d.names import QProbe, Parameter, FitProblem
-sys.path.append(os.path.expanduser('~/git/analysis_playground/bayesian-fitting'))
-import model_utils
+from tron.bayesian_analysis import model_utils
 
-import warnings
-import matplotlib.cbook
-warnings.simplefilter('ignore', UserWarning)
 
 # Parse input arguments ########################################################
 # First argument is the data file to use

@@ -38,28 +38,15 @@ store_basename = os.path.join(
 
 results_dir = os.path.join(dyn_model_dir, store_basename)
 
-
 loop = fitting_loop.FittingLoop(data_dir, results_dir=results_dir, model_dir=project_dir, model_name='model-loop-207168',
                                 initial_err_file=initial_err_file, initial_expt_file=initial_expt_file,
                                 final_err_file=final_err_file, final_expt_file=final_expt_file,
                 )
 
-try:
-    print(loop)
-    loop.print_initial_final()
-except Exception:
-    print(loop.last_output)
+print(loop)
+loop.print_initial_final()
 
-PROCESS_ALL_DATA = True
+_file_list = sorted(os.listdir(data_dir))
+_good_files = [_f for _f in _file_list if _f.startswith('r%d_t' % dynamic_run)]
 
-first = 0
-last = -1
-
-if PROCESS_ALL_DATA:
-    _file_list = sorted(os.listdir(data_dir))
-    # Get only the files for the run we're interested in
-    _good_files = [_f for _f in _file_list if _f.startswith('r%d_t' % dynamic_run)]
-    #_good_files = _good_files[first:last]
-
-print(_good_files)
 loop.fit(_good_files, fit_forward=False)
