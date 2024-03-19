@@ -19,8 +19,9 @@ class PathSelector:
         self.key = key
         self.select_dir = select_dir
         self.create_file = create_file
+        self.call_back = None
 
-    def attach(self, layout, row_id):
+    def attach(self, layout, row_id, call_back=None):
         font = QtGui.QFont()
         font.setItalic(True)
         font.setBold(True)
@@ -47,17 +48,24 @@ class PathSelector:
         spacer = QSpacerItem(10, 10, QtWidgets.QSizePolicy.Minimum,
                              QtWidgets.QSizePolicy.Expanding)
         layout.addItem(spacer, row_id+1, 1)
+        self.call_back = call_back
 
         return row_id + 2
+
+    def set_value(self, value):
+        self.path_label.setText(value)
+        QtCore.QSettings().setValue(f'tr_bayes_{self.key}', value)
 
     def selection(self):
         if self.select_dir:
             _path = QFileDialog.getExistingDirectory(None, 'Select a folder:',
                                                      self.path_label.text(),
                                                      QFileDialog.ShowDirsOnly)
-            if os.path.isdir(_path) or len(_path.strip()) == 0:
+            if os.path.isdir(_path):
                 self.path_label.setText(_path)
-                QtCore.QSettings().setValue(f'tr_bayes_{self.key}', _path)
+                QtCore.QSettings().setValue(f'tr_bayes_{self.key}', _path)            
+                if self.call_back is not None:
+                    self.call_back(_path)
         else:
             if self.create_file:
                 _path, _ = QFileDialog.getSaveFileName(None, 'Save file',
@@ -72,7 +80,7 @@ class PathSelector:
                 if os.path.isfile(_path) or len(_path.strip()) == 0:
                     self.path_label.setText(_path)
                     QtCore.QSettings().setValue(f'tr_bayes_{self.key}', _path)
-    
+
 
 class BayesianModel(QWidget):
 
@@ -100,6 +108,7 @@ class BayesianModel(QWidget):
         row_id += 1
         self.run_number_ledit = QtWidgets.QLineEdit()
         self.run_number_ledit.setValidator(QtGui.QIntValidator())
+        self.run_number_ledit.returnPressed.connect(self.detect_fit_results)
         layout.addWidget(self.run_number_ledit, row_id, 1)
         self.run_number_label = QLabel(self)
         self.run_number_label.setText("Run number")
@@ -114,7 +123,7 @@ class BayesianModel(QWidget):
         self.data_dir = PathSelector("input_data", self, "Data directory", 
                                         "Click to directory containing reduced time-resolved data.",
                                         select_dir=True)
-        row_id = self.data_dir.attach(layout, row_id)
+        row_id = self.data_dir.attach(layout, row_id, self.data_dir_call_back)
 
         # Initial state fit results
         text = (
@@ -210,6 +219,42 @@ class BayesianModel(QWidget):
         # Populate from previous session
         self.read_settings()
 
+    def data_dir_call_back(self, path):
+        files = os.listdir(path)
+        run_number = self.run_number_ledit.text()
+        files = [f for f in files if f.startswith('r%s_t' % run_number) and f .endswith('.txt')]
+        self.first_time_ledit.setText('0')
+        self.last_time_ledit.setText(str(len(files)))
+    
+    def detect_fit_results(self):
+        run_number = int(self.run_number_ledit.text())
+        fit_dir = os.path.join(os.path.expanduser('~'), 'reflectivity_fits')
+        if os.path.isdir(fit_dir):
+            before = run_number - 100
+            after = run_number + 100
+            fit_before = ''
+            fit_after = ''
+            for _dir in os.listdir(fit_dir):
+                if os.path.isdir(os.path.join(fit_dir, _dir)):
+                    for _run_dir in os.listdir(os.path.join(fit_dir, _dir)):
+                        try:
+                            raiseit=False
+                            _run = int(_run_dir)
+                            if _run < run_number and _run > before:
+                                before = _run
+                                fit_before = os.path.join(fit_dir, _dir, _run_dir, '__model-expt.json')
+                                  
+                            elif _run > run_number and _run < after:
+                                after = _run
+                                fit_after = os.path.join(fit_dir, _dir, _run_dir, '__model-expt.json')
+                        except:
+                            continue
+
+            if os.path.isfile(fit_before):
+                self.initial_state_file.set_value(fit_before)
+            if os.path.isfile(fit_after):
+                self.final_state_file.set_value(fit_after)
+
     def read_settings(self):
         """
         Read settings from the last session not covered by the PathSelector objects
@@ -217,7 +262,7 @@ class BayesianModel(QWidget):
         _run_number = self.settings.value("tr_bayes_run_number", '')
         self.run_number_ledit.setText(_run_number)
         self.first_time_ledit.setText(self.settings.value("tr_bayes_first_time", '0'))
-        self.last_time_ledit.setText(self.settings.value("tr_bayes_last_time", ''))
+        self.last_time_ledit.setText(self.settings.value("tr_bayes_last_time", '-1'))
 
     def save_settings(self):
         self.settings.setValue('tr_bayes_run_number', self.run_number_ledit.text())
