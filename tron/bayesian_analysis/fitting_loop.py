@@ -179,7 +179,8 @@ class FittingLoop():
             print("    Completed: %g s [total=%g m]" % (item_time, total_time))
 
 
-def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt_file, results_dir):
+def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt_file, results_dir,
+                first_item=0, last_item=-1):
     """
         Execute the fitting loop.
 
@@ -224,7 +225,7 @@ def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt
     _good_files = [_f for _f in sorted(os.listdir(data_dir)) if _f.startswith('r%d_t' % dynamic_run)]
 
     try:
-        loop.fit(_good_files, fit_forward=False)
+        loop.fit(_good_files[first_item:last_item], fit_forward=False)
     except Exception as e:
         print(f"Error: {e}")
         print(loop.last_output)

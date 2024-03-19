@@ -146,6 +146,9 @@ def expt_from_json(model_expt_json, q=None, q_resolution=0.025, probe=None,
         If model_err_json is provided, it will be used to set the width of
         the prior distribution.
     """
+    if q is None:
+        q = np.linspace(0.005, 0.2, 100)
+
     # The QProbe object represents the beam
     if probe is None:
         zeros = np.zeros(len(q))
@@ -192,6 +195,6 @@ def calculate_reflectivity(model_expt_json_file, q, q_resolution=0.025):
     """
         Reflectivity calculation using refl1d
     """
-    expt = expt_from_json_file(model_expt_json_file, q, q_resolution=0.025)
+    expt = expt_from_json_file(model_expt_json_file, q, q_resolution=q_resolution)
     _, r = expt.reflectivity()
     return r

@@ -16,44 +16,41 @@ except:
     HAS_BUMPS = False
 
 if HAS_BUMPS:
-    from . import fit_uncertainties
-
-def read_model(model_path, dq=0.027):
-    with open(model_path) as fd:
-        print('Processing: %s' % model_path)
-        code = fd.read()
-        # The refl1d model we are reading was auto-generated. We need to replace
-        # the data part in case the data file is no longer available.
-        code = code.replace('reduced_file = "/SNS/users/m2d/__data.txt"', 'Q = np.arange(0.008, 1., 0.01)')
-        code = code.replace('reduced_file =', 'Q = np.arange(0.008, 1., 0.01)\n# reduced_file =')
-        code = code.replace('expt_file =', 'expt_file = "%s"\n# ' % model_path.replace('.py', '-expt.json'))
-        code = code.replace('err_file =', 'err_file = "%s"\n# ' % model_path.replace('.py', '-err.json'))
-        code = code.replace('Q, R, dR, dQ = numpy.loadtxt(reduced_file).T', 'dQ = Q*%s' % dq)
-        code = code.replace('Q, R, dR, dQ = np.loadtxt(reduced_file).T', 'dQ = Q*%s' % dq)
-        code = code.replace(', data=(R[i_min:i_max], dR[i_min:i_max])', '')
-        exec(code, globals())
-        print("Read in %s" % model_path)
+    from . import fit_uncertainties, model_utils
+    from refl1d.names import FitProblem
 
 
-def plot_sld(run, title, fit_dir=None, show_cl=True, dq=0.027, z_offset=0.0):
+def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
     """
-        :param ar_dir: Automated-reduction directory
+        :param profile_file: File containing the SLD profile.
+        :param label: Label for the plot.
+        :param show_cl: Show the confidence limits.
+        :param z_offset: Offset to apply to the z-axis when plotting.
     """
-    sld_file = os.path.join(fit_dir, str(run), "__model-profile.dat")
-    print(sld_file)
-    if not os.path.isfile(sld_file):
-        print("Could not find %s" % sld_file)
+    if not os.path.isfile(profile_file):
+        print("Could not find %s" % profile_file)
         return
-    pre_sld = np.loadtxt(sld_file).T
 
-    mcmc_file = os.path.join(fit_dir, str(run), "__model-chain.mc")
-    mcmc_found = os.path.isfile(mcmc_file)
-    if show_cl and not mcmc_found:
-        print("MCMC not available: %s" % mcmc_file)
-    if show_cl and HAS_BUMPS and mcmc_found:
+    pre_sld = np.loadtxt(profile_file).T
+    linewidth = 1 if show_cl else 2
+    plt.plot(pre_sld[0][-1]-pre_sld[0]+z_offset, pre_sld[1], markersize=4,
+             label=label, linewidth=linewidth,)
+
+    if show_cl and HAS_BUMPS:
+        # Sanity check
+        mc_file = profile_file.replace('-profile.dat', '-chain.mc')
+        if not os.path.isfile(mc_file):
+            mc_file = profile_file.replace('-profile.dat', '-chain.mc.gz')
+        if not os.path.isfile(mc_file):
+            print("Could not find: %s" % mc_file)
+            return
+
         # Load the model that was used for fitting
-        read_model(os.path.join(fit_dir, str(run), '__model.py'))
-        model_path = os.path.join(fit_dir, str(run), '__model')
+        expt_file = profile_file.replace('-profile.dat', '-expt.json')
+
+        expt = model_utils.expt_from_json_file(expt_file, set_ranges=True)
+        problem = FitProblem(expt)
+        model_path = profile_file.replace('-profile.dat', '')
         state = dream.state.load_state(model_path)
         z_max = pre_sld[0][-1]-pre_sld[0][0]
         print("Z offset = %g;    Z_max = %g" % (pre_sld[0][0], z_max))
@@ -64,29 +61,14 @@ def plot_sld(run, title, fit_dir=None, show_cl=True, dq=0.027, z_offset=0.0):
 
         _z, _q = acc_data.quantiles(90)
         _z = np.asarray(_z)+z_offset
-        plt.fill_between(_z, _q[0][0], _q[0][1], alpha=0.2)
-        #z, sld, dsld = acc_data.mean()
-        #plt.fill_between(z[1:], sld[1:]-dsld[1:], sld[1:]+dsld[1:],
-        #                alpha=0.2)
-    plt.plot(pre_sld[0][-1]-pre_sld[0]+z_offset, pre_sld[1], markersize=4, label=title, linewidth=2, )
-
-
-def plot_fit(run, title, fit_dir=None, ar_dir=None, scale=1):
-    data_file = os.path.join(ar_dir, 'REFL_%s_combined_data_auto.txt' % run)
-    _data = np.loadtxt(data_file).T
-
-    fit_file = os.path.join(fit_dir, str(run), "__model-refl.dat")
-    _fit = np.loadtxt(fit_file).T
-
-    plt.errorbar(_data[0], _data[1]*scale, yerr=_data[2]*scale, linewidth=1, 
-                 markersize=4, marker='.', linestyle='', label=title)
-
-    plt.plot(_fit[0], _fit[4]*scale, linewidth=1, markersize=2, marker='', color='grey', zorder=4)
+        plt.fill_between(_z, _q[0][0], _q[0][1], alpha=0.2, color=plt.gca().lines[-1].get_color())
 
 
 def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_index=-1,
                   dyn_data_dir=None, dyn_fit_dir=None, model_name='__model', scale=1):
-
+    """
+        Plot the dynamic data for a given run, and display the initial and final states.
+    """
     # Fit results
     pre_fit = None
     if os.path.isfile(initial_state):
@@ -132,7 +114,6 @@ def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_i
  
             # Get fit if it exists
             fit_file = os.path.join(dyn_fit_dir, _data_name, '%s-refl.dat' % model_name)
-            #print("Looking for: %s" % fit_file)
 
             if os.path.isfile(fit_file):
                 fit_data = np.loadtxt(fit_file).T
@@ -146,10 +127,6 @@ def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_i
 
                 scale *= multiplier
                 file_list.append([_time, _data_name, _data_name])
-                #[8010, 'r201289_t008010', '2215784']
-            else:
-                pass
-                #print("%s is empty" % _file)
 
     final_scale = scale/multiplier
     if post_fit is not None:
@@ -172,69 +149,39 @@ def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_i
     return file_list
 
 
-def plot_dyn_sld(file_list, initial_state, final_state, delta_t=15,
-                 fit_dir=None, dyn_data_dir=None, dyn_fit_dir=None, model_name='__model',
-                 model_file=None, show_cl=True, legend_font_size=6):
+def plot_dyn_sld(file_list, initial_state, final_state,
+                 dyn_fit_dir=None, model_name='__model',
+                 show_cl=True, legend_font_size=6,
+                 max_z=None, reverse=True, sld_range=None):
 
     fig, ax = plt.subplots(dpi=200, figsize=(5, 4.1))
     plt.subplots_adjust(left=0.15, right=.95, top=0.95, bottom=0.15)
 
-    prop_cycle = plt.rcParams['axes.prop_cycle']
-    colors = prop_cycle.by_key()['color']
-
     # Plot initial state
-    i_color = 0
     if initial_state is not None:
-        i_color = 1
-        plot_sld(initial_state, 'Initial state', fit_dir=fit_dir, show_cl=False)  
+        plot_sld(initial_state, 'Initial state', show_cl=False)  
 
-    for _file in file_list:
-        i_color += 1
-        i_color = i_color % len(colors)
+    _file_list = reversed(file_list) if reverse else file_list
+    delta_t = int(file_list[1][0]) - int(file_list[0][0])
+
+    for _file in _file_list:
         profile_file = os.path.join(dyn_fit_dir, str(_file[2]), '%s-profile.dat' % model_name)
-        if not os.path.isfile(profile_file):
-            print("Could not find: %s" % profile_file)
-            continue
-        _data = np.loadtxt(profile_file).T
-        
-        if HAS_BUMPS and show_cl:
-            mc_file = os.path.join(dyn_fit_dir, str(_file[2]), '%s-chain.mc' % model_name)
-            if not os.path.isfile(mc_file):
-                mc_file = os.path.join(dyn_fit_dir, str(_file[2]), '%s-chain.mc.gz' % model_name)
-            if os.path.isfile(mc_file):
-                if model_file is None:
-                    model_file = os.path.join(dyn_fit_dir, str(_file[2]), '%s.py' % model_name)
-                read_model(model_file)
-                model_path = os.path.join(dyn_fit_dir, str(_file[2]), model_name)
-                print("Model: %s" % model_path)
-                state = dream.state.load_state(model_path)
-                z_max = _data[0][-1]-_data[0][0]
-                print("Z offset = %g;    Z_max = %g" % (_data[0][0], z_max))
-                acc_data = fit_uncertainties.load_bumps(model_path, problem, state=state,
-                                                        trim=1000,
-                                                        z_min=0, #_data[0][0],
-                                                        z_max=z_max)[0]
-
-                _z, _q = acc_data.quantiles(90)
-                plt.fill_between(_z, _q[0][0], _q[0][1], color=colors[i_color], alpha=0.2)
-            else:
-                print("MCMC not available: %s" % mc_file)
+        plot_sld(profile_file, '%d < t < %d s' % (int(_file[0]), int(_file[0])+delta_t),
+                 show_cl=HAS_BUMPS and show_cl)
             
-        _label = '%d < t < %d s' % (int(_file[0]), int(_file[0])+delta_t)
-        plt.plot(_data[0][-1]-_data[0], _data[1], markersize=4, color=colors[i_color],
-                 label=_label, linewidth=1, )
-
     # Plot final OCP
     if final_state is not None:
-        plot_sld(final_state, 'Final state', fit_dir=fit_dir, show_cl=False)           
+        plot_sld(final_state, 'Final state', show_cl=False)           
         
     handles, labels = ax.get_legend_handles_labels()
-    #plt.legend(frameon=False, prop={'size': 10})
     plt.legend(handles[::-1], labels[::-1], loc='lower right', frameon=False, fontsize=legend_font_size)
+    if max_z is not None:
+        plt.xlim(-20, max_z)
+    if sld_range is not None:
+        plt.ylim(sld_range[0], sld_range[1])
     plt.xlabel('z ($\AA$)', fontsize=14)
     plt.ylabel('SLD ($10^{-6}/\AA^2$)', fontsize=14)
     plt.show()
-    plt.savefig('%s_dyn_sld.svg' % initial_state)
 
 
 def trend_data(file_list, initial_state, final_state, label='',
@@ -374,37 +321,6 @@ def trend_data(file_list, initial_state, final_state, label='',
     return trend_data, trend_err
         
 
-def save_parameters():
-    # Write human-readable output
-
-    _header = ['Time (sec)', 'Layer 1 rho', 'Layer 1 thickness', 'Layer 1 interface',
-               'Layer 2 rho', 'Layer 2 thickness', 'Layer 2 interface', 'THF interface', 'chi2']
-
-    with open(os.path.join(project_dir, 'results-table-193673.md'), 'w') as fd:
-
-        header = '| ' + '|'.join(_header) + '|\n'
-        header += '| ' + '|'.join(len(_header)*['---']) + '|\n'
-        fd.write(header)
-
-        for i, _time in enumerate(timestamp):
-            entry = '| %g ' % (60.0*timestamp[i])
-            entry += '| %4.2f ± %4.2f' % (oxide_rho[i], oxide_drho[i])
-            entry += '| %4.1f ± %4.1f' % (oxide_thick[i], oxide_dthick[i])
-            entry += '| %4.1f ± %4.1f' % (oxide_sigma[i], oxide_dsigma[i])
-            entry += '| %4.2f ± %4.2f' % (sei_rho[i], sei_drho[i])
-            entry += '| %4.1f ± %4.1f' % (sei_thick[i], sei_dthick[i])
-            entry += '| %4.1f ± %4.1f' % (sei_sigma[i], sei_dsigma[i])
-            entry += '| %4.1f ± %4.1f' % (solvent_sigma[i], solvent_dsigma[i])
-            entry += '| %g |\n' % chi2[i]
-            fd.write(entry)
-
-    # Save trend data
-    trend_data = [60.0*np.asarray(timestamp), oxide_rho, oxide_drho, oxide_thick, oxide_dthick, oxide_sigma, oxide_dsigma,
-                  sei_rho, sei_drho, sei_thick, sei_dthick, sei_sigma, sei_dsigma, solvent_sigma, solvent_dsigma]
-    trend_data = np.asarray(trend_data).T
-
-    np.savetxt(os.path.join(project_dir, "results-table-193673.txt"), trend_data)
-
 def write_md_table(trend_data_file):
     """
         The trend data file is saved as:
@@ -429,6 +345,7 @@ def write_md_table(trend_data_file):
                     entry += '| %4.2f ± %4.2f ' % (data[1][k][i], data[2][k][i])
                 entry += '| %g |\n' % data[3][i]
                 output.write(entry)
+
 
 def detect_changes(dynamic_run, dyn_data_dir, first=0, last=-1, out_array=None):
 
@@ -600,3 +517,26 @@ def package_json_data(dynamic_run, dyn_data_dir, out_array=None):
             json.dump(dict(times=compiled_times, data=compiled_array), fp)
         
     return compiled_times, compiled_array
+
+def main(dynamic_run, dyn_data_dir, model_file, initial_state, final_state, results_dir,
+         first_item=0, last_item=-1):
+    initial_refl = initial_state.replace('expt.json', 'refl.dat')
+    final_refl = final_state.replace('expt.json', 'refl.dat')
+    model_name = os.path.basename(model_file).replace('.py', '')
+
+    # Generate plot of the reflectivity data
+    plotted_data = plot_dyn_data(dynamic_run, initial_refl, final_refl,
+                                 dyn_data_dir=dyn_data_dir, dyn_fit_dir=results_dir, model_name=model_name,
+                                 first_index=first_item, last_index=last_item)
+    plt.savefig(os.path.join(results_dir, 'dyn-%d.png' % dynamic_run))
+    plt.savefig(os.path.join(results_dir, 'dyn-%d.svg' % dynamic_run))
+
+    # Generate plot of the SLD profiles
+    initial_sld = initial_state.replace('expt.json', 'profile.dat')
+    final_sld = final_state.replace('expt.json', 'profile.dat')
+
+    plot_dyn_sld(plotted_data, initial_sld, final_sld,
+                 dyn_fit_dir=results_dir, 
+                 show_cl=True, model_name=model_name, legend_font_size=8)
+    plt.savefig(os.path.join(results_dir, 'sld-%d.png' % dynamic_run))
+    plt.savefig(os.path.join(results_dir, 'sld-%d.svg' % dynamic_run))

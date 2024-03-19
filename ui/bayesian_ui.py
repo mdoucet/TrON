@@ -23,6 +23,7 @@ class PathSelector:
     def attach(self, layout, row_id):
         font = QtGui.QFont()
         font.setItalic(True)
+        font.setBold(True)
 
         instructions = QLabel(self.parent)
         instructions.setText(self.directive)
@@ -88,6 +89,7 @@ class BayesianModel(QWidget):
         row_id = 1
         font = QtGui.QFont()
         font.setItalic(True)
+        font.setBold(True)
 
         # Run number
         instructions_run = QLabel(self)
@@ -109,10 +111,10 @@ class BayesianModel(QWidget):
 
         # Time-resolved data directory
         row_id += 1
-        self.td_data_dir = PathSelector("input_data", self, "Data directory", 
+        self.data_dir = PathSelector("input_data", self, "Data directory", 
                                         "Click to directory containing reduced time-resolved data.",
                                         select_dir=True)
-        row_id = self.td_data_dir.attach(layout, row_id)
+        row_id = self.data_dir.attach(layout, row_id)
 
         # Initial state fit results
         text = (
@@ -135,8 +137,34 @@ class BayesianModel(QWidget):
         row_id = self.final_state_file.attach(layout, row_id)
 
         # Select fit direction
+        instructions_options = QLabel(self)
+        instructions_options.setText("Select the fit order and data range.")
+        instructions_options.setFont(font)
+        layout.addWidget(instructions_options, row_id, 1, 1, 2)
+        row_id += 1
+
         self.fit_direction = QtWidgets.QCheckBox("Fit forward")
         layout.addWidget(self.fit_direction, row_id, 1)
+
+        row_id += 1
+        self.first_time_ledit = QtWidgets.QLineEdit()
+        self.first_time_ledit.setValidator(QtGui.QIntValidator())
+        layout.addWidget(self.first_time_ledit, row_id, 1)
+        self.first_time_label = QLabel(self)
+        self.first_time_label.setText("First time index [usually 0]")
+        layout.addWidget(self.first_time_label, row_id, 2)
+        spacer = QSpacerItem(10, 10, QtWidgets.QSizePolicy.Minimum,
+                             QtWidgets.QSizePolicy.Expanding)
+
+        row_id += 1
+        self.last_time_ledit = QtWidgets.QLineEdit()
+        self.last_time_ledit.setValidator(QtGui.QIntValidator())
+        layout.addWidget(self.last_time_ledit, row_id, 1)
+        self.last_time_label = QLabel(self)
+        self.last_time_label.setText("Last time index [leave empty or -1 for all]")
+        layout.addWidget(self.last_time_label, row_id, 2)
+        spacer = QSpacerItem(10, 10, QtWidgets.QSizePolicy.Minimum,
+                             QtWidgets.QSizePolicy.Expanding)
         row_id += 1
 
         # refl1d model file
@@ -165,14 +193,19 @@ class BayesianModel(QWidget):
         self.create_model.setStyleSheet("background-color : orange")
         layout.addWidget(self.create_model, row_id, 1)
 
-        self.perform_reduction = QPushButton('Process')
-        self.perform_reduction.setStyleSheet("background-color : green")
-        layout.addWidget(self.perform_reduction, row_id, 2)
+        self.perform_fits = QPushButton('Process')
+        self.perform_fits.setStyleSheet("background-color : green")
+        layout.addWidget(self.perform_fits, row_id, 2)
+
+        self.analyze = QPushButton('Analyze')
+        self.analyze.setStyleSheet("background-color : steelblue")
+        layout.addWidget(self.analyze, row_id, 3)
 
         # connections
         row_id += 1
-        self.perform_reduction.clicked.connect(self.process)
+        self.perform_fits.clicked.connect(self.process)
         self.create_model.clicked.connect(self.create_model_file)
+        self.analyze.clicked.connect(self.analyze_results)
 
         # Populate from previous session
         self.read_settings()
@@ -183,9 +216,13 @@ class BayesianModel(QWidget):
         """
         _run_number = self.settings.value("tr_bayes_run_number", '')
         self.run_number_ledit.setText(_run_number)
+        self.first_time_ledit.setText(self.settings.value("tr_bayes_first_time", '0'))
+        self.last_time_ledit.setText(self.settings.value("tr_bayes_last_time", ''))
 
     def save_settings(self):
         self.settings.setValue('tr_bayes_run_number', self.run_number_ledit.text())
+        self.settings.setValue('tr_bayes_first_time', self.first_time_ledit.text())
+        self.settings.setValue('tr_bayes_last_time', self.last_time_ledit.text())
 
     def check_inputs(self):
         error = None
@@ -193,13 +230,13 @@ class BayesianModel(QWidget):
         if not os.path.isdir(self.output_dir.path_label.text()):
             error = "The chosen output directory could not be found"
 
-        try:
-            int(self.run_number_ledit.text())
-        except Exception:
-            error = "Check your run number"
+        if self.first_time_ledit.text() == '':
+            self.first_time_ledit.setText('0')
+        if self.last_time_ledit.text() == '':
+            self.last_time_ledit.setText('-1')
+
         # Pop up a dialog if there were invalid inputs
         if error:
-            print('test')
             self.show_dialog(error)
             return False
         return True
@@ -240,7 +277,44 @@ class BayesianModel(QWidget):
         self.save_settings()
 
         print("Processing!")
-        fitting_loop.execute_fit(int(self.run_number_ledit.text()), self.td_data_dir.path_label.text(),
-                                 self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
-                                 self.final_state_file.path_label.text(),
-                                 self.output_dir.path_label.text())
+        try:
+            fitting_loop.execute_fit(int(self.run_number_ledit.text()), self.data_dir.path_label.text(),
+                                    self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
+                                    self.final_state_file.path_label.text(),
+                                    self.output_dir.path_label.text(),
+                                    first_item=int(self.first_time_ledit.text()),
+                                    last_item=int(self.last_time_ledit.text()))
+
+            summary_plots.main(int(self.run_number_ledit.text()), self.data_dir.path_label.text(),
+                               self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
+                               self.final_state_file.path_label.text(),
+                               self.output_dir.path_label.text(),
+                               first_item=int(self.first_time_ledit.text()),
+                               last_item=int(self.last_time_ledit.text()))
+        except Exception as exc:
+            print(exc)
+            self.show_dialog(str(exc))
+        print("Completed!")
+
+    def analyze_results(self):
+        """
+            Run the analysis on the results
+        """
+        if not self.check_inputs():
+            print("Invalid inputs found")
+            return
+
+        self.save_settings()
+
+        print("Analyzing!")
+        try:
+            summary_plots.main(int(self.run_number_ledit.text()), self.data_dir.path_label.text(),
+                            self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
+                            self.final_state_file.path_label.text(),
+                            self.output_dir.path_label.text(),
+                            first_item=int(self.first_time_ledit.text()),
+                            last_item=int(self.last_time_ledit.text()))
+        except Exception as exc:
+            print(exc)
+            self.show_dialog(str(exc))
+        print("Completed!")
