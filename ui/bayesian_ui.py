@@ -327,6 +327,7 @@ class BayesianModel(QWidget):
                                     self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
                                     self.final_state_file.path_label.text(),
                                     self.output_dir.path_label.text(),
+                                    fit_forward=self.fit_direction.isChecked(),
                                     first_item=int(self.first_time_ledit.text()),
                                     last_item=int(self.last_time_ledit.text()))
 

@@ -18,6 +18,7 @@ class FittingLoop():
     def __init__(self, dyn_data_dir, results_dir, model_dir=None, model_name='__model',
                  initial_err_file=None, initial_expt_file=None,
                  final_err_file=None, final_expt_file=None,
+                 fit_forward=True
                 ):
         """
         Initialize the FittingLoop object.
@@ -31,7 +32,7 @@ class FittingLoop():
         :param final_err_file: File path of the final error file.
         :param final_expt_file: File path of the final experiment file.
         """
-        self.fit_forward = True
+        self.fit_forward = fit_forward
         self.dyn_file_list = []
         self.model_dir = model_dir
         self.model_name = model_name
@@ -180,7 +181,7 @@ class FittingLoop():
 
 
 def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt_file, results_dir,
-                first_item=0, last_item=-1):
+                first_item=0, last_item=-1, fit_forward=True):
     """
         Execute the fitting loop.
 
@@ -218,6 +219,7 @@ def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt
     loop = FittingLoop(data_dir, results_dir=results_dir, model_dir=model_dir, model_name=model_name,
                        initial_err_file=initial_err_file, initial_expt_file=initial_expt_file,
                        final_err_file=final_err_file, final_expt_file=final_expt_file,
+                       fit_forward=fit_forward
                     )
 
     loop.print_initial_final()
