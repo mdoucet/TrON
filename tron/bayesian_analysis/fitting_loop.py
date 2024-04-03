@@ -17,8 +17,7 @@ class FittingLoop():
 
     def __init__(self, dyn_data_dir, results_dir, model_dir=None, model_name='__model',
                  initial_err_file=None, initial_expt_file=None,
-                 final_err_file=None, final_expt_file=None,
-                 fit_forward=True
+                 final_err_file=None, final_expt_file=None
                 ):
         """
         Initialize the FittingLoop object.
@@ -219,7 +218,6 @@ def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt
     loop = FittingLoop(data_dir, results_dir=results_dir, model_dir=model_dir, model_name=model_name,
                        initial_err_file=initial_err_file, initial_expt_file=initial_expt_file,
                        final_err_file=final_err_file, final_expt_file=final_expt_file,
-                       fit_forward=fit_forward
                     )
 
     loop.print_initial_final()
@@ -227,7 +225,7 @@ def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt
     _good_files = [_f for _f in sorted(os.listdir(data_dir)) if _f.startswith('r%d_t' % dynamic_run)]
 
     try:
-        loop.fit(_good_files[first_item:last_item], fit_forward=False)
+        loop.fit(_good_files[first_item:last_item], fit_forward=fit_forward)
     except Exception as e:
         print(f"Error: {e}")
         print(loop.last_output)
