@@ -31,7 +31,7 @@ class FittingLoop():
         :param final_err_file: File path of the final error file.
         :param final_expt_file: File path of the final experiment file.
         """
-        self.fit_forward = fit_forward
+        self.fit_forward = True
         self.dyn_file_list = []
         self.model_dir = model_dir
         self.model_name = model_name
