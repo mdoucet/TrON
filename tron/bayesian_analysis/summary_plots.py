@@ -33,8 +33,6 @@ def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
 
     pre_sld = np.loadtxt(profile_file).T
     linewidth = 1 if show_cl else 2
-    plt.plot(pre_sld[0][-1]-pre_sld[0]+z_offset, pre_sld[1], markersize=4,
-             label=label, linewidth=linewidth,)
 
     if show_cl and HAS_BUMPS:
         # Sanity check
@@ -52,16 +50,20 @@ def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
         problem = FitProblem(expt)
         model_path = profile_file.replace('-profile.dat', '')
         state = dream.state.load_state(model_path)
-        z_max = pre_sld[0][-1]-pre_sld[0][0]
-        print("Z offset = %g;    Z_max = %g" % (pre_sld[0][0], z_max))
-        acc_data = fit_uncertainties.load_bumps(model_path, problem, state=state,
-                                                trim=10,
-                                                z_min=0, #_data[0][0],
-                                                z_max=z_max)[0]
 
-        _z, _q = acc_data.quantiles(90)
-        _z = np.asarray(_z)+z_offset
-        plt.fill_between(_z, _q[0][0], _q[0][1], alpha=0.2, color=plt.gca().lines[-1].get_color())
+        z, best, low, high = fit_uncertainties.get_sld_contour(problem, state, cl=90, align=-1)[0]
+
+        # Find the starting point of the distribution
+        for i in range(len(best)-1, 0, -1):
+            if np.fabs(best[i] - best[i-1]) > 0.001:
+                break
+
+        _z = z[i]-z+z_offset
+        plt.plot(_z[:i], best[:i], markersize=4, label=label, linewidth=linewidth,)
+        plt.fill_between(_z[:i], low[:i], high[:i], alpha=0.2, color=plt.gca().lines[-1].get_color())
+    else:
+        plt.plot(pre_sld[0][-1]-pre_sld[0]+z_offset, pre_sld[1], markersize=4,
+                 label=label, linewidth=linewidth,)
 
 
 def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_index=-1,

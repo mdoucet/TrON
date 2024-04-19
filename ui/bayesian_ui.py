@@ -322,6 +322,7 @@ class BayesianModel(QWidget):
         self.save_settings()
 
         print("Processing!")
+        print("Direction")
         try:
             fitting_loop.execute_fit(int(self.run_number_ledit.text()), self.data_dir.path_label.text(),
                                     self.model_file.path_label.text(), self.initial_state_file.path_label.text(),
