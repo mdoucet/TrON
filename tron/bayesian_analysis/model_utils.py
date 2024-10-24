@@ -3,15 +3,12 @@ import json
 import numpy as np
 
 import refl1d
-from refl1d.names import QProbe, Parameter
-
-from .bayes_experiment import BayesSLD as SLD
-from .bayes_experiment import BayesSlab as Slab
-from .bayes_experiment import BayesExperiment as Experiment
+from refl1d.names import QProbe, Parameter, SLD, Slab, Experiment
 
 ERR_MIN_ROUGH = 3
 ERR_MIN_THICK = 5
 ERR_MIN_RHO = 0.2
+
 
 def print_model(model0, model1):
     print("                   Initial \t            Step")
@@ -95,23 +92,38 @@ def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ra
                 else:
                     interface_std = 0
 
-        material = SLD(name=layer['name'], rho=rho, irho=irho,
-                       rho_width=rho_std, irho_width=irho_std)
+        material = SLD(name=layer['name'], rho=rho, irho=irho)
 
-        slab = Slab(material=material,
-                    thickness=thickness, thickness_width=thickness_std,
-                    interface=interface, interface_width=interface_std)
+        slab = Slab(material=material, thickness=thickness, interface=interface)
 
         # Set the range for each tunable parameter
-        if set_ranges:
-            if not rho_fixed:
+        if not rho_fixed:
+            if rho_std > 0:
+                slab.material.rho.dev(rho_std, limits=(rho_limits[0], rho_limits[1]))
+            else:
                 slab.material.rho.range(rho_limits[0], rho_limits[1])
-            if not irho_fixed:
+            slab.material.rho.fixed = not set_ranges
+        if not irho_fixed:
+            if irho_std > 0:
+                slab.material.irho.dev(irho_std, limits=(irho_limits[0], irho_limits[1]))
+            else:
                 slab.material.irho.range(irho_limits[0], irho_limits[1])
-            if not thickness_fixed:
+            slab.material.irho.fixed = not set_ranges
+        if not thickness_fixed:
+            print("Setting thickness")
+            if thickness_std > 0:
+                print(thickness_std)
+                slab.thickness.dev(thickness_std, limits=(thickness_limits[0], thickness_limits[1]))
+                print(slab.thickness.distribution.std)
+            else:
                 slab.thickness.range(thickness_limits[0], thickness_limits[1])
-            if not interface_fixed:
+            slab.thickness.fixed = not set_ranges
+        if not interface_fixed:
+            if interface_std > 0:
+                slab.interface.dev(interface_std, limits=(interface_limits[0], interface_limits[1]))
+            else:
                 slab.interface.range(interface_limits[0], interface_limits[1])
+            slab.interface.fixed = not set_ranges
 
         sample = slab if sample is None else sample | slab
     return sample
