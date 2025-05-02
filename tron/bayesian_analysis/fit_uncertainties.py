@@ -3,7 +3,7 @@
   This currently works for inverted geometry and fixed substrate roughness, as it aligns
   the profiles to that point before doing the statistics.
 """
-from refl1d import errors
+from refl1d import uncertainty as errors
 import numpy as np
 
 

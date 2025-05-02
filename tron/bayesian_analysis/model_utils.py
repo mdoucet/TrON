@@ -5,6 +5,8 @@ import numpy as np
 import refl1d
 from refl1d.names import QProbe, Parameter, SLD, Slab, Experiment
 
+from bumps import serialize
+
 ERR_MIN_ROUGH = 3
 ERR_MIN_THICK = 5
 ERR_MIN_RHO = 0.2
@@ -129,7 +131,89 @@ def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ra
     return sample
 
 
-def expt_from_json_file(model_expt_json_file, q=None, q_resolution=0.025, probe=None,
+def fix_all_parameters(expt, verbose=False):
+    """
+    Fix all the parameters within an Experiment object
+
+    Parameters
+    ----------
+    expt : Experiment
+        Experiment object to process
+    verbose : bool
+        If True, print out parameters that were not fixed
+    """
+    pars = expt.parameters()
+
+    def _fix_parameters(item):
+        if type(item) is  Parameter:
+            if verbose and not item.fixed:
+                print('Found %s' % item)
+            item.fixed = True
+        elif type(item) is list:
+            for p in item:
+                _fix_parameters(p)
+        elif type(item) is dict:
+            for p, v in item.items():
+                _fix_parameters(v)
+        else:
+            print('Found unknown parameter: %s' % item)
+
+    _fix_parameters(pars)
+
+
+def expt_from_json_file(model_expt_json_file, probe=None,
+                        model_err_json_file=None, prior_scale=1, set_ranges=False):
+    """
+    Load an Experiment from an experiment json file.
+    
+    When iterating over data slices, the experiment will be used for data other
+    that what was originally loaded to run the fit that created the json file.
+    To allow for this usage, we may create a new experiment with a given probe.
+
+    Given that we may also want to change the fit parameters, we will need the
+    ability to switch off all the existing limits.
+
+    Parameters
+    ----------
+    model_expt_json_file : str
+        -expt.json file
+    probe : Probe
+        Optional Probe object to replace the one found in the serialized Experiment
+    model_err_json_file : str
+        -err.json file containing the uncertainties from the previous fit
+    prior_scale : float
+        Optional parameter to multiply the width of the Bayesian prior by
+    set_ranges : bool
+        If False, all the parameters should be fixed
+    
+    Returns
+    -------
+        Experiment
+    """
+    with open(model_expt_json_file, "rt") as input_file:
+        serialized = input_file.read()
+        serialized_dict = json.loads(serialized)
+        expt = serialize.deserialize(serialized_dict, migration=True)
+    
+    # Since this Experiment was created by a fit to an initial/final state,
+    # it may not have the correct fit parameters. Fix all the parameters
+    # and set the correct fit parameters according to the provided uncertainty file.
+    fix_all_parameters(expt)
+
+    # set_ranges and providing the err.json file are redundent information...
+    # TODO refactor this
+    if not set_ranges:
+        pass
+    
+
+    # If the probe was provided, create a new experiment with it.
+    if probe is not None:
+        expt = Experiment(probe=probe, sample=expt.sample)
+
+    return expt
+
+
+def expt_from_json_file_v08(model_expt_json_file, q=None, q_resolution=0.025, probe=None,
                         model_err_json_file=None, prior_scale=1, set_ranges=False):
     """
         Return the experiment object described by the provided json data.

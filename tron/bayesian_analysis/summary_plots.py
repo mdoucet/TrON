@@ -9,6 +9,7 @@ from matplotlib.path import Path
 from matplotlib.patches import PathPatch
 
 try:
+    import bumps
     from bumps import dream
     HAS_BUMPS  = True
 except:
@@ -18,7 +19,17 @@ except:
 if HAS_BUMPS:
     from . import fit_uncertainties, model_utils
     from refl1d.names import FitProblem
+    from bumps.serialize import load_file
+    from refl1d.bumps_interface import fitplugin
 
+
+def load_problem(json_file: str) -> FitProblem:
+    bumps.cli.install_plugin(fitplugin)
+    problem = load_file(json_file)
+
+    # The following is how you would get the Experiment
+    # expt = list(problem.models)[0]
+    return problem
 
 def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
     """
@@ -34,6 +45,10 @@ def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
     pre_sld = np.loadtxt(profile_file).T
     linewidth = 1 if show_cl else 2
 
+    expt_file = profile_file.replace('-profile.dat', '-expt.json')
+    if '-1-' in profile_file:
+        profile_file = profile_file.replace('-1-', '-')
+
     if show_cl and HAS_BUMPS:
         # Sanity check
         mc_file = profile_file.replace('-profile.dat', '-chain.mc')
@@ -44,8 +59,6 @@ def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
             return
 
         # Load the model that was used for fitting
-        expt_file = profile_file.replace('-profile.dat', '-expt.json')
-
         expt = model_utils.expt_from_json_file(expt_file, set_ranges=True)
         problem = FitProblem(expt)
         model_path = profile_file.replace('-profile.dat', '')
@@ -154,14 +167,16 @@ def plot_dyn_data(dynamic_run, initial_state, final_state, first_index=0, last_i
 def plot_dyn_sld(file_list, initial_state, final_state,
                  dyn_fit_dir=None, model_name='__model',
                  show_cl=True, legend_font_size=6,
-                 max_z=None, reverse=True, sld_range=None):
+                 max_z=None, reverse=True, sld_range=None,
+                 initial_z_offset=0, final_z_offset=0
+                ):
 
     fig, ax = plt.subplots(dpi=200, figsize=(5, 4.1))
     plt.subplots_adjust(left=0.15, right=.95, top=0.95, bottom=0.15)
 
     # Plot initial state
     if initial_state is not None:
-        plot_sld(initial_state, 'Initial state', show_cl=False)  
+        plot_sld(initial_state, 'Initial state', show_cl=False, z_offset=initial_z_offset)  
 
     _file_list = reversed(file_list) if reverse else file_list
     delta_t = int(file_list[1][0]) - int(file_list[0][0])
@@ -173,7 +188,7 @@ def plot_dyn_sld(file_list, initial_state, final_state,
             
     # Plot final OCP
     if final_state is not None:
-        plot_sld(final_state, 'Final state', show_cl=False)           
+        plot_sld(final_state, 'Final state', show_cl=False, z_offset=final_z_offset)       
         
     handles, labels = ax.get_legend_handles_labels()
     plt.legend(handles[::-1], labels[::-1], loc='lower right', frameon=False, fontsize=legend_font_size)
@@ -318,9 +333,13 @@ def trend_data(file_list, initial_state, final_state, label='',
 
     plt.xlabel("Time (seconds)")
 
-    with open(os.path.join(dyn_fit_dir, 'trend-%s.json' % model_name), 'w') as fp:
+    # Trend output
+    trend_file = os.path.join(dyn_fit_dir, 'trend-%s.json' % model_name)
+    with open(trend_file, 'w') as fp:
+        print("Output saved to", trend_file)
         json.dump([timestamp, trend_data, trend_err, chi2], fp)
-    return trend_data, trend_err
+
+    return trend_data, trend_err, timestamp
         
 
 def write_md_table(trend_data_file):
@@ -365,6 +384,9 @@ def detect_changes(dynamic_run, dyn_data_dir, first=0, last=-1, out_array=None):
     t = []
     skipped = 0
     previous = None
+    previous_q = None
+    previous = None
+    previous_err = None
     
     min_q = 0.0154
     for _file in _good_files[first:last]:
