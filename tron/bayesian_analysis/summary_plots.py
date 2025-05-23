@@ -25,11 +25,7 @@ if HAS_BUMPS:
 
 def load_problem(json_file: str) -> FitProblem:
     bumps.cli.install_plugin(fitplugin)
-    problem = load_file(json_file)
-
-    # The following is how you would get the Experiment
-    # expt = list(problem.models)[0]
-    return problem
+    return load_file(json_file)
 
 def plot_sld(profile_file, label, show_cl=True, z_offset=0.0):
     """
