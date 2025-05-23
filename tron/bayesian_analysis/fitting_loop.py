@@ -248,9 +248,9 @@ def execute_fit(
         Directory where the dynamic data is stored.
     model_file : str
         File path of the model.
-    initial_expt_file : str
+    initial_expt_file : str, optional
         File path of the initial refl1d json experiment file.
-    final_expt_file : str
+    final_expt_file : str, optional
         File path of the final refl1d json experiment file.
     results_dir : str
         Directory where the results will be stored.
