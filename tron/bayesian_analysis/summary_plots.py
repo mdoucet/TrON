@@ -381,7 +381,6 @@ def detect_changes(dynamic_run, dyn_data_dir, first=0, last=-1, out_array=None):
     skipped = 0
     previous = None
     previous_q = None
-    previous = None
     previous_err = None
     
     min_q = 0.0154
