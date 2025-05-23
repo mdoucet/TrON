@@ -1,6 +1,7 @@
 """
 Create a model from the sample object described by an existing model.
 """
+
 from . import model_utils
 
 
