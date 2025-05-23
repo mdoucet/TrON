@@ -30,14 +30,25 @@ class FittingLoop:
         """
         Initialize the FittingLoop object.
 
-        :param dyn_data_dir: Directory where the dynamic data is stored.
-        :param results_dir: Directory where the results will be stored.
-        :param model_dir: Directory where the model is stored.
-        :param model_name: Name of the model file.
-        :param initial_err_file: File path of the initial error file.
-        :param initial_expt_file: File path of the initial experiment file.
-        :param final_err_file: File path of the final error file.
-        :param final_expt_file: File path of the final experiment file.
+        Parameters
+        ----------
+        dyn_data_dir : str
+            Directory where the dynamic data is stored.
+        results_dir : str
+            Directory where the results will be stored.
+        model_dir : str, optional
+            Directory where the model is stored.
+        model_name : str, optional
+            Name of the model file.
+        initial_err_file : str, optional
+            File path of the initial error file.
+        initial_expt_file : str, optional
+            File path of the initial experiment file.
+        final_err_file : str, optional
+            File path of the final error file.
+        final_expt_file : str, optional
+            File path of the final experiment file.
+
         """
         self.fit_forward = True
         self.dyn_file_list = []
@@ -55,7 +66,11 @@ class FittingLoop:
         """
         Save all the settings to a file.
 
-        :param file_path: File path to save the settings.
+        Parameters
+        ----------
+        file_path : str
+            File path to save the settings.
+
         """
         meta_data = dict(
             model_dir=self.model_dir,
@@ -76,7 +91,11 @@ class FittingLoop:
         """
         Load settings from a file.
 
-        :param file_path: File path to load the settings from.
+        Parameters
+        ----------
+        file_path : str
+            File path to load the settings from.
+
         """
         with open(file_path, "r") as fd:
             meta_data = json.load(fd)
@@ -94,6 +113,12 @@ class FittingLoop:
     def __str__(self):
         """
         Return a string representation of the FittingLoop object.
+
+        Returns
+        -------
+        str
+            String representation of the FittingLoop object.
+
         """
         return (
             f"Model: {os.path.join(self.model_dir, self.model_name)}\n"
@@ -118,8 +143,13 @@ class FittingLoop:
         """
         Execute the fitting loop.
 
-        :param dyn_file_list: List of time-resolved data sets, ordered in increasing times.
-        :param fit_forward: Flag indicating whether to fit forward in time (default: True).
+        Parameters
+        ----------
+        dyn_file_list : list
+            List of time-resolved data sets, ordered in increasing times.
+        fit_forward : bool, optional
+            Flag indicating whether to fit forward in time (default: True).
+
         """
         self.fit_forward = fit_forward
         self.dyn_file_list = dyn_file_list
@@ -209,12 +239,27 @@ def execute_fit(
     """
     Execute the fitting loop.
 
-    :param dynamic_run: Run number of the dynamic data.
-    :param data_dir: Directory where the dynamic data is stored.
-    :param model_file: File path of the model.
-    :param initial_expt_file: File path of the initial refl1d json experiment file.
-    :param final_expt_file: File path of the final refl1d json experiment file.
-    :param results_dir: Directory where the results will be stored.
+    Parameters
+    ----------
+    dynamic_run : int
+        Run number of the dynamic data.
+    data_dir : str
+        Directory where the dynamic data is stored.
+    model_file : str
+        File path of the model.
+    initial_expt_file : str
+        File path of the initial refl1d json experiment file.
+    final_expt_file : str
+        File path of the final refl1d json experiment file.
+    results_dir : str
+        Directory where the results will be stored.
+    first_item : int, optional
+        Index of the first data file to use (default: 0).
+    last_item : int, optional
+        Index of the last data file to use (default: -1, which means all files until the end).
+    fit_forward : bool, optional
+        Flag indicating whether to fit forward in time (default: True).
+
     """
     model_dir, model_name = os.path.split(model_file)
 
@@ -271,6 +316,7 @@ def execute_fit(
 
 
 if __name__ == "__main__":
+    # Main execution block for running the fitting loop from the command line.
     import sys
     import argparse
 
