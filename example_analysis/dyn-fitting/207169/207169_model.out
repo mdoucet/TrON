@@ -1,0 +1,47 @@
+-- Model 0 None
+.probe
+  .back_absorption = 1
+  .background = 0
+  .intensity = normalization = 1.1
+.sample
+  .layers
+    [0]
+      .interface = THF interface = 56.5208 in [1,77]
+      .material
+        .irho = THF irho = 0
+        .rho = THF rho = 6.245
+      .thickness = THF thickness = 0
+    [1]
+      .interface = SEI interface = 7.6421 in [5,35]
+      .material
+        .irho = SEI irho = 0
+        .rho = SEI rho = 4.03032 in [1,6]
+      .thickness = SEI thickness = 175.125 in [10,300]
+    [2]
+      .interface = material interface = 12.0918 in [1,35]
+      .material
+        .irho = material irho = 0
+        .rho = material rho = 3.77792 in [1,6]
+      .thickness = material thickness = 48.3343 in [10,300]
+    [3]
+      .interface = Cu interface = 10.7851 in [1,15]
+      .material
+        .irho = Cu irho = 0
+        .rho = Cu rho = 6.483
+      .thickness = Cu thickness = 560.58 in [10,800]
+    [4]
+      .interface = Ti interface = 2.19266 in [1,15]
+      .material
+        .irho = Ti irho = 0
+        .rho = Ti rho = -0.42709 in [-5,4]
+      .thickness = Ti thickness = 56.0669 in [10,100]
+    [5]
+      .interface = Si interface = 0
+      .material
+        .irho = Si irho = 0
+        .rho = Si rho = 2.07
+      .thickness = Si thickness = 0
+  .thickness = Stack thickness = 840.106
+
+[chisq=1.627(60), nllf=187.883]
+[overall chisq=1.627(60), nllf=187.883]

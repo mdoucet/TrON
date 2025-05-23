@@ -198,7 +198,7 @@ def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt
         if 'expt' not in initial_expt_file:
             raise ValueError("The initial experiment file must be a refl1d json experiment file.")
         else:
-            initial_err_file = initial_expt_file.replace('expt', 'err')
+            initial_err_file = initial_expt_file.replace('1-expt', 'err')
             if not os.path.exists(initial_err_file):
                 raise ValueError(f"Error file {initial_err_file} does not exist.")
     
@@ -206,7 +206,7 @@ def execute_fit(dynamic_run, data_dir, model_file, initial_expt_file, final_expt
         if 'expt' not in final_expt_file:
             raise ValueError("The final experiment file must be a refl1d json experiment file.")
         else:
-            final_err_file = final_expt_file.replace('expt', 'err')
+            final_err_file = final_expt_file.replace('1-expt', 'err')
             if not os.path.exists(final_err_file):
                 raise ValueError(f"Error file {final_err_file} does not exist.")
           
