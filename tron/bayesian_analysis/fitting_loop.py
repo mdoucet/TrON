@@ -7,6 +7,7 @@ import time
 import json
 import subprocess
 import shutil
+from typing import List, Optional, Dict
 
 from . import model_utils
 
@@ -18,15 +19,15 @@ class FittingLoop:
 
     def __init__(
         self,
-        dyn_data_dir,
-        results_dir,
-        model_dir=None,
-        model_name="__model",
-        initial_err_file=None,
-        initial_expt_file=None,
-        final_err_file=None,
-        final_expt_file=None,
-    ):
+        dyn_data_dir: str,
+        results_dir: str,
+        model_dir: Optional[str] = None,
+        model_name: str = "__model",
+        initial_err_file: Optional[str] = None,
+        initial_expt_file: Optional[str] = None,
+        final_err_file: Optional[str] = None,
+        final_expt_file: Optional[str] = None,
+    ) -> None:
         """
         Initialize the FittingLoop object.
 
@@ -50,19 +51,19 @@ class FittingLoop:
             File path of the final experiment file.
 
         """
-        self.fit_forward = True
-        self.dyn_file_list = []
-        self.model_dir = model_dir
-        self.model_name = model_name
-        self.dyn_data_dir = dyn_data_dir
-        self.results_dir = results_dir
-        self.initial_err_file = initial_err_file
-        self.initial_expt_file = initial_expt_file
-        self.final_err_file = final_err_file
-        self.final_expt_file = final_expt_file
-        self.last_output = ""
+        self.fit_forward: bool = True
+        self.dyn_file_list: List[str] = []
+        self.model_dir: Optional[str] = model_dir
+        self.model_name: str = model_name
+        self.dyn_data_dir: str = dyn_data_dir
+        self.results_dir: str = results_dir
+        self.initial_err_file: Optional[str] = initial_err_file
+        self.initial_expt_file: Optional[str] = initial_expt_file
+        self.final_err_file: Optional[str] = final_err_file
+        self.final_expt_file: Optional[str] = final_expt_file
+        self.last_output: str = ""
 
-    def save(self, file_path):
+    def save(self, file_path: str) -> None:
         """
         Save all the settings to a file.
 
@@ -72,7 +73,7 @@ class FittingLoop:
             File path to save the settings.
 
         """
-        meta_data = dict(
+        meta_data: Dict[str, any] = dict(
             model_dir=self.model_dir,
             model_name=self.model_name,
             dyn_data_dir=self.dyn_data_dir,
@@ -87,7 +88,7 @@ class FittingLoop:
         with open(file_path, "w") as fd:
             json.dump(meta_data, fd)
 
-    def load(self, file_path):
+    def load(self, file_path: str) -> None:
         """
         Load settings from a file.
 
@@ -110,7 +111,7 @@ class FittingLoop:
         self.fit_forward = meta_data["fit_forward"]
         self.dyn_file_list = meta_data["dyn_file_list"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Return a string representation of the FittingLoop object.
 
@@ -128,7 +129,7 @@ class FittingLoop:
             f"Final state: {self.final_expt_file}"
         )
 
-    def print_initial_final(self):
+    def print_initial_final(self) -> None:
         """
         Print the initial and final models.
         """
@@ -139,7 +140,7 @@ class FittingLoop:
             final_model = json.load(fd)
         model_utils.print_model(initial_model, final_model)
 
-    def fit(self, dyn_file_list, fit_forward=True):
+    def fit(self, dyn_file_list: List[str], fit_forward: bool = True) -> None:
         """
         Execute the fitting loop.
 
@@ -226,16 +227,16 @@ class FittingLoop:
 
 
 def execute_fit(
-    dynamic_run,
-    data_dir,
-    model_file,
-    initial_expt_file,
-    final_expt_file,
-    results_dir,
-    first_item=0,
-    last_item=-1,
-    fit_forward=True,
-):
+    dynamic_run: int,
+    data_dir: str,
+    model_file: str,
+    initial_expt_file: Optional[str],
+    final_expt_file: Optional[str],
+    results_dir: str,
+    first_item: int = 0,
+    last_item: int = -1,
+    fit_forward: bool = True,
+) -> None:
     """
     Execute the fitting loop.
 
@@ -320,7 +321,7 @@ if __name__ == "__main__":
     import sys
     import argparse
 
-    parser = argparse.ArgumentParser(
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="Fitting loop for time-resolved data sets."
     )
     parser.add_argument("dynamic_run", type=int, help="Run number of the dynamic data.")
@@ -342,7 +343,7 @@ if __name__ == "__main__":
         "results_dir", type=str, help="Directory where the results will be stored."
     )
 
-    args = parser.parse_args()
+    args: argparse.Namespace = parser.parse_args()
 
     execute_fit(
         args.dynamic_run,
