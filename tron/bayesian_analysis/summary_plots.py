@@ -203,7 +203,7 @@ def plot_dyn_sld(file_list, initial_state, final_state,
 
 def trend_data(file_list, initial_state, final_state, label='',
                  fit_dir=None, dyn_data_dir=None, dyn_fit_dir=None, model_name='__model',
-                 model_file=None, newplot=True, plot_chi2=True, add_plot=0):
+                 model_file=None, newplot=True, plot_chi2=False, add_plot=0):
     """
         sei_thick.append(item['sei thickness'][which])
     sei_dthick.append(item['sei thickness']['std'])
@@ -215,8 +215,7 @@ def trend_data(file_list, initial_state, final_state, label='',
 
     trend_data = dict()
     trend_err = dict()
-    chi2 = []
-    nlprior = []
+    chi2 = []  #TODO: NOT FILLED YET WITH REFL1D V1
     timestamp = []
 
     with open(par_file, 'r') as fd:
@@ -232,23 +231,8 @@ def trend_data(file_list, initial_state, final_state, label='',
     for _file in file_list:
         err_file = os.path.join(dyn_fit_dir, str(_file[2]), '%s.err' % model_name)
         err_json = os.path.join(dyn_fit_dir, str(_file[2]), '%s-err.json' % model_name)
-        bayes_json = os.path.join(dyn_fit_dir, str(_file[2]), '%s-bayes.dat' % model_name)
 
         if os.path.isfile(err_json):
-            with open(bayes_json) as fd:
-                for l in fd.readlines():
-                    if l.startswith('NLL'):
-                        toks = l.split(':')
-                        _nll = float(toks[1])
-                    if l.startswith('NLPrior'):
-                        toks = l.split(':')
-                        _nlprior = float(toks[1])
-                    if l.startswith('Points'):
-                        toks = l.split(':')
-                        _npts = float(toks[1])
-                chi2.append(_nll/_npts)
-                nlprior.append(_nlprior/_npts)
-
             with open(err_json) as fd:
                 m = json.load(fd)
                 for par in trend_data.keys():
@@ -327,7 +311,6 @@ def trend_data(file_list, initial_state, final_state, label='',
     if plot_chi2:
         ax = plt.subplot(n_tot, 1, n_tot)
         plt.plot(timestamp, chi2, label='$\chi^2$')
-        plt.plot(timestamp, nlprior, label='prior', linestyle='--')
         plt.ylabel('$\chi^2$')
         plt.legend(frameon=False)
 
