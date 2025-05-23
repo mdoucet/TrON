@@ -9,5 +9,6 @@ pip install -e .
 
 # TODO
 
+- Use `deserialize` to upgrade to recent refl1d, but also process the uncertainties as Bayesian prior.
 - Add canned output and plots after the fitting loop
 - Add single file output to the tNR reduction so that it's easy to copy around

@@ -1,5 +1,7 @@
 # Outputs
 example_analysis/dyn-fitting/207168-dyn/
+example_analysis/test/
+example_analysis/*-test/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

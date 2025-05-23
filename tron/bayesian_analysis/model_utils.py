@@ -5,6 +5,8 @@ import numpy as np
 import refl1d
 from refl1d.names import QProbe, Parameter, SLD, Slab, Experiment
 
+from bumps import serialize
+
 ERR_MIN_ROUGH = 3
 ERR_MIN_THICK = 5
 ERR_MIN_RHO = 0.2
@@ -14,85 +16,112 @@ def print_model(model0, model1):
     print("                   Initial \t            Step")
     for p in model0.keys():
         if p in model1:
-            print("%15s %7.3g +- %-7.2g \t %7.3g +- %-7.2g" % (p, model0[p]['best'], model0[p]['std'],
-                                                               model1[p]['best'], model1[p]['std']))
+            print(
+                "%15s %7.3g +- %-7.2g \t %7.3g +- %-7.2g"
+                % (
+                    p,
+                    model0[p]["best"],
+                    model0[p]["std"],
+                    model1[p]["best"],
+                    model1[p]["std"],
+                )
+            )
         else:
-            print("%15s %7.3g +- %-7.2g" % (p, model0[p]['best'], model0[p]['std']))
+            print("%15s %7.3g +- %-7.2g" % (p, model0[p]["best"], model0[p]["std"]))
 
 
-def sample_from_json_file(model_expt_json_file, model_err_json_file=None,
-                          prior_scale=1, set_ranges=False):
+def sample_from_json_file(
+    model_expt_json_file, model_err_json_file=None, prior_scale=1, set_ranges=False
+):
     """
-        Return the sample object described by the provided json data.
+    Return the sample object described by the provided json data.
 
-        If model_err_json is provided, it will be used to set the width of
-        the prior distribution.
+    If model_err_json is provided, it will be used to set the width of
+    the prior distribution.
     """
-    with open(model_expt_json_file, 'r') as fd:
+    with open(model_expt_json_file, "r") as fd:
         expt = json.load(fd)
 
     err = None
     if model_err_json_file:
-        with open(model_err_json_file, 'r') as fd:
+        with open(model_err_json_file, "r") as fd:
             err = json.load(fd)
 
-    return sample_from_json(expt, model_err_json=err,
-                            prior_scale=prior_scale, set_ranges=set_ranges)
+    return sample_from_json(
+        expt, model_err_json=err, prior_scale=prior_scale, set_ranges=set_ranges
+    )
 
-def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ranges=False):
+
+def sample_from_json(
+    model_expt_json, model_err_json=None, prior_scale=1, set_ranges=False
+):
     """
-        Return the sample object described by the provided json data.
+    Return the sample object described by the provided json data.
 
-        If model_err_json is provided, it will be used to set the width of
-        the prior distribution.
+    If model_err_json is provided, it will be used to set the width of
+    the prior distribution.
     """
     sample = None
-    for layer in model_expt_json['sample']['layers']:
+    for layer in model_expt_json["sample"]["layers"]:
         # dict_keys(['type', 'name', 'thickness', 'interface', 'material', 'magnetism'])
 
-        rho = layer['material']['rho']['value']
-        rho_fixed = layer['material']['rho']['fixed']
-        rho_limits = layer['material']['rho']['bounds']['limits']
+        rho = layer["material"]["rho"]["value"]
+        rho_fixed = layer["material"]["rho"]["fixed"]
+        rho_limits = layer["material"]["rho"]["bounds"]["limits"]
         rho_std = 0
 
-        irho = layer['material']['irho']['value']
-        irho_fixed = layer['material']['irho']['fixed']
-        irho_limits = layer['material']['irho']['bounds']['limits']
+        irho = layer["material"]["irho"]["value"]
+        irho_fixed = layer["material"]["irho"]["fixed"]
+        irho_limits = layer["material"]["irho"]["bounds"]["limits"]
         irho_std = 0
 
-        thickness = layer['thickness']['value']
-        thickness_fixed = layer['thickness']['fixed']
-        thickness_limits = layer['thickness']['bounds']['limits']
+        thickness = layer["thickness"]["value"]
+        thickness_fixed = layer["thickness"]["fixed"]
+        thickness_limits = layer["thickness"]["bounds"]["limits"]
         thickness_std = 0
 
-        interface = layer['interface']['value']
-        interface_fixed = layer['interface']['fixed']
-        interface_limits = layer['interface']['bounds']['limits']
+        interface = layer["interface"]["value"]
+        interface_fixed = layer["interface"]["fixed"]
+        interface_limits = layer["interface"]["bounds"]["limits"]
         interface_std = 0
 
         if model_err_json:
-            if layer['material']['rho']['name'] in model_err_json:
+            if layer["material"]["rho"]["name"] in model_err_json:
                 if prior_scale > 0:
-                    rho_std = prior_scale*model_err_json[layer['material']['rho']['name']]['std'] + ERR_MIN_RHO
+                    rho_std = (
+                        prior_scale
+                        * model_err_json[layer["material"]["rho"]["name"]]["std"]
+                        + ERR_MIN_RHO
+                    )
                 else:
                     rho_std = 0
-            if layer['material']['irho']['name'] in model_err_json:
+            if layer["material"]["irho"]["name"] in model_err_json:
                 if prior_scale > 0:
-                    irho_std = prior_scale*model_err_json[layer['material']['irho']['name']]['std'] + ERR_MIN_RHO
+                    irho_std = (
+                        prior_scale
+                        * model_err_json[layer["material"]["irho"]["name"]]["std"]
+                        + ERR_MIN_RHO
+                    )
                 else:
                     irho_std = 0
-            if layer['thickness']['name'] in model_err_json:
+            if layer["thickness"]["name"] in model_err_json:
                 if prior_scale > 0:
-                    thickness_std = prior_scale*model_err_json[layer['thickness']['name']]['std'] + ERR_MIN_THICK
+                    thickness_std = (
+                        prior_scale * model_err_json[layer["thickness"]["name"]]["std"]
+                        + ERR_MIN_THICK
+                    )
                 else:
                     thickness_std = 0
-            if layer['interface']['name'] in model_err_json:
+            if layer["interface"]["name"] in model_err_json:
                 if prior_scale > 0:
-                    interface_std = prior_scale*model_err_json[layer['interface']['name']]['std'] + ERR_MIN_ROUGH
+                    interface_std = (
+                        prior_scale * model_err_json[layer["interface"]["name"]]["std"]
+                        + ERR_MIN_ROUGH
+                    )
                 else:
                     interface_std = 0
 
-        material = SLD(name=layer['name'], rho=rho, irho=irho)
+        material = SLD(name=layer["name"], rho=rho, irho=irho)
 
         slab = Slab(material=material, thickness=thickness, interface=interface)
 
@@ -105,7 +134,9 @@ def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ra
             slab.material.rho.fixed = not set_ranges
         if not irho_fixed:
             if irho_std > 0:
-                slab.material.irho.dev(irho_std, limits=(irho_limits[0], irho_limits[1]))
+                slab.material.irho.dev(
+                    irho_std, limits=(irho_limits[0], irho_limits[1])
+                )
             else:
                 slab.material.irho.range(irho_limits[0], irho_limits[1])
             slab.material.irho.fixed = not set_ranges
@@ -113,14 +144,18 @@ def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ra
             print("Setting thickness")
             if thickness_std > 0:
                 print(thickness_std)
-                slab.thickness.dev(thickness_std, limits=(thickness_limits[0], thickness_limits[1]))
+                slab.thickness.dev(
+                    thickness_std, limits=(thickness_limits[0], thickness_limits[1])
+                )
                 print(slab.thickness.distribution.std)
             else:
                 slab.thickness.range(thickness_limits[0], thickness_limits[1])
             slab.thickness.fixed = not set_ranges
         if not interface_fixed:
             if interface_std > 0:
-                slab.interface.dev(interface_std, limits=(interface_limits[0], interface_limits[1]))
+                slab.interface.dev(
+                    interface_std, limits=(interface_limits[0], interface_limits[1])
+                )
             else:
                 slab.interface.range(interface_limits[0], interface_limits[1])
             slab.interface.fixed = not set_ranges
@@ -129,83 +164,99 @@ def sample_from_json(model_expt_json, model_err_json=None, prior_scale=1, set_ra
     return sample
 
 
-def expt_from_json_file(model_expt_json_file, q=None, q_resolution=0.025, probe=None,
-                        model_err_json_file=None, prior_scale=1, set_ranges=False):
+def fix_all_parameters(expt, verbose=False):
     """
-        Return the experiment object described by the provided json data.
+    Fix all the parameters within an Experiment object
 
-        If model_err_json is provided, it will be used to set the width of
-        the prior distribution.
+    Parameters
+    ----------
+    expt : Experiment
+        Experiment object to process
+    verbose : bool
+        If True, print out parameters that were not fixed
     """
-    with open(model_expt_json_file, 'r') as fd:
-        expt = json.load(fd)
+    pars = expt.parameters()
 
-    err = None
-    if model_err_json_file:
-        with open(model_err_json_file, 'r') as fd:
-            err = json.load(fd)
+    def _fix_parameters(item):
+        if type(item) is Parameter:
+            if verbose and not item.fixed:
+                print("Found %s" % item)
+            item.fixed = True
+        elif type(item) is list:
+            for p in item:
+                _fix_parameters(p)
+        elif type(item) is dict:
+            for p, v in item.items():
+                _fix_parameters(v)
+        else:
+            print("Found unknown parameter: %s" % item)
 
-    return expt_from_json(expt, q=q, q_resolution=q_resolution, probe=probe,
-                          model_err_json=err, prior_scale=prior_scale,
-                          set_ranges=set_ranges)
+    _fix_parameters(pars)
 
 
-def expt_from_json(model_expt_json, q=None, q_resolution=0.025, probe=None,
-                   model_err_json=None, prior_scale=1, set_ranges=False):
+def expt_from_json_file(
+    model_expt_json_file: str,
+    probe: QProbe | None = None,
+    model_err_json_file: str = None,
+    prior_scale: float = 1,
+    set_ranges: bool = False,
+    keep_original_ranges: bool = False,
+):
     """
-        Return the experiment object described by the provided json data.
+    Load an Experiment from an experiment json file.
 
-        If model_err_json is provided, it will be used to set the width of
-        the prior distribution.
+    When iterating over data slices, the experiment will be used for data other
+    that what was originally loaded to run the fit that created the json file.
+    To allow for this usage, we may create a new experiment with a given probe.
+
+    Given that we may also want to change the fit parameters, we will need the
+    ability to switch off all the existing limits.
+
+    Parameters
+    ----------
+    model_expt_json_file : str
+        -expt.json file
+    probe : QProbe
+        Optional Probe object to replace the one found in the serialized Experiment
+    model_err_json_file : str
+        -err.json file containing the uncertainties from the previous fit
+    prior_scale : float
+        Optional parameter to multiply the width of the Bayesian prior by
+    set_ranges : bool
+        If False, all the parameters should be fixed
+    keep_original_ranges : bool
+        If True, the parameter ranges found in the Experiment file will be kept
+
+    Returns
+    -------
+        Experiment
     """
-    if q is None:
-        q = np.linspace(0.005, 0.2, 100)
+    with open(model_expt_json_file, "rt") as input_file:
+        serialized = input_file.read()
+        serialized_dict = json.loads(serialized)
+        expt = serialize.deserialize(serialized_dict, migration=True)
 
-    # The QProbe object represents the beam
-    if probe is None:
-        zeros = np.zeros(len(q))
-        dq = q_resolution * q
-        probe = QProbe(q, dq, data=(zeros, zeros))
+    if not keep_original_ranges:
+        # Since this Experiment was created by a fit to an initial/final state,
+        # it may not have the correct fit parameters. Fix all the parameters
+        # and set the correct fit parameters according to the provided uncertainty file.
+        fix_all_parameters(expt)
 
-    sample = sample_from_json(model_expt_json,
-                              model_err_json=model_err_json,
-                              prior_scale=prior_scale, set_ranges=set_ranges)
+        # set_ranges and providing the err.json file are redundent information...
+        # TODO refactor this
+        if not set_ranges:
+            pass
 
-    intensity = model_expt_json['probe']['intensity']['value']
-    intensity_fixed = model_expt_json['probe']['intensity']['fixed']
-    intensity_limits = model_expt_json['probe']['intensity']['bounds']['limits']
-    intensity_std = 0
+    # If the probe was provided, create a new experiment with it.
+    if probe is not None:
+        expt = Experiment(probe=probe, sample=expt.sample)
 
-    background = model_expt_json['probe']['background']['value']
-    background_fixed = model_expt_json['probe']['background']['fixed']
-    background_limits = model_expt_json['probe']['background']['bounds']['limits']
-    background_std = 0
-
-    if model_err_json:
-        if model_expt_json['probe']['intensity']['name'] in model_err_json:
-            intensity_std = model_err_json[model_expt_json['probe']['intensity']['name']]['std']
-        if model_expt_json['probe']['background']['name'] in model_err_json:
-            background_std = model_err_json[model_expt_json['probe']['background']['name']]['std']
-
-    probe.intensity = Parameter(value=intensity,
-                                center=intensity, width=intensity_std,
-                                name=model_expt_json['probe']['intensity']['name'])
-
-    probe.background = Parameter(value=background,
-                                 center=background, width=background_std,
-                                 name=model_expt_json['probe']['background']['name'])
-    if set_ranges:
-        if not background_fixed:
-            probe.intensity.range(background_limits[0], background_limits[1])
-        if not intensity_fixed:
-            probe.background.range(intensity_limits[0], intensity_limits[1])
-
-    return Experiment(probe=probe, sample=sample)
+    return expt
 
 
 def calculate_reflectivity(model_expt_json_file, q, q_resolution=0.025):
     """
-        Reflectivity calculation using refl1d
+    Reflectivity calculation using refl1d
     """
     expt = expt_from_json_file(model_expt_json_file, q, q_resolution=q_resolution)
     _, r = expt.reflectivity()

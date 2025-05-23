@@ -306,7 +306,9 @@ class BayesianModel(QWidget):
             self.show_dialog("The chosen model file directory could not be found")
             return
 
-        template_str = template.create_model(init_json, final_json, fit_forward=fit_forward)
+        starting_data = init_json if fit_forward else final_json
+
+        template_str = template.create_model(starting_data)
 
         with open(model_path, 'w') as fd:
             fd.write(template_str)
