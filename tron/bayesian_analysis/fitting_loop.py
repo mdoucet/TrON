@@ -73,7 +73,7 @@ class FittingLoop:
             File path to save the settings.
 
         """
-        meta_data: Dict[str, any] = dict(
+        meta_data: Dict[str, Any] = dict(
             model_dir=self.model_dir,
             model_name=self.model_name,
             dyn_data_dir=self.dyn_data_dir,
