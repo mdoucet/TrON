@@ -12,7 +12,7 @@ try:
     import bumps
     from bumps import dream
     HAS_BUMPS  = True
-except:
+except Exception:
     print("Summary_plot could not import bumps")
     HAS_BUMPS = False
 
